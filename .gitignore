@@ -1,10 +1,16 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 92f34c9cf4c5d916653fde6e6db49b996e99756d
 # Created by https://www.toptal.com/developers/gitignore/api/c,data
 # Edit at https://www.toptal.com/developers/gitignore?templates=c,data
 
 ### C ###
+<<<<<<< HEAD
 >>>>>>> 92f34c9 (Initialization of project hierarchie)
+=======
+>>>>>>> 92f34c9cf4c5d916653fde6e6db49b996e99756d
 # Prerequisites
 *.d
 
@@ -59,9 +65,12 @@ Mkfile.old
 dkms.conf
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # debug information files
 *.dwo
 =======
+=======
+>>>>>>> 92f34c9cf4c5d916653fde6e6db49b996e99756d
 ### Data ###
 *.csv
 *.dat
@@ -76,5 +85,9 @@ dkms.conf
 *.vcf
 *.xml
 
+<<<<<<< HEAD
 # End of https://www.toptal.com/developers/gitignore/api/c,data
 >>>>>>> 92f34c9 (Initialization of project hierarchie)
+=======
+# End of https://www.toptal.com/developers/gitignore/api/c,data
+>>>>>>> 92f34c9cf4c5d916653fde6e6db49b996e99756d
