@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+=======
+# Created by https://www.toptal.com/developers/gitignore/api/c,data
+# Edit at https://www.toptal.com/developers/gitignore?templates=c,data
+
+### C ###
+>>>>>>> 92f34c9 (Initialization of project hierarchie)
 # Prerequisites
 *.d
 
@@ -51,5 +58,23 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+<<<<<<< HEAD
 # debug information files
 *.dwo
+=======
+### Data ###
+*.csv
+*.dat
+*.efx
+*.gbr
+*.key
+*.pps
+*.ppt
+*.pptx
+*.sdf
+*.tax2010
+*.vcf
+*.xml
+
+# End of https://www.toptal.com/developers/gitignore/api/c,data
+>>>>>>> 92f34c9 (Initialization of project hierarchie)
