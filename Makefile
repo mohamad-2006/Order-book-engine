@@ -1,44 +1,43 @@
-# Nom de l'exécutable final
-TARGET = bin/order_book
-
-# Compilateur et options
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -Iinclude
-LDFLAGS = 
-
-# Dossiers
+CFLAGS = -Wall -Wextra -g -Iinclude
 SRC_DIR = src
 OBJ_DIR = obj
-BIN_DIR = bin
+TEST_DIR = tests
 
-# Lister tous les fichiers .c dans src/
-SRCS = $(wildcard $(SRC_DIR)/*.c)
-# Transformer la liste des .c en liste de .o dans le dossier obj/
-OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+# 1. On définit les fichiers de logique (tout sauf les fichiers avec un main)
+# On exclut explicitement main.c pour la bibliothèque de logique
+CORE_SRCS = $(SRC_DIR)/orderbook.c $(SRC_DIR)/order.c $(SRC_DIR)/rbtree.c
+CORE_OBJS = $(CORE_SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-# --- CIBLES ---
+# 2. Cibles finales
+TARGET = trade_engine
+TEST_TARGET = test_bst
 
-# Cible par défaut : construit l'exécutable
-all: directories $(TARGET)
+all: $(TARGET)
 
-# Créer les dossiers bin et obj s'ils n'existent pas
-directories:
-	@mkdir -p $(BIN_DIR) $(OBJ_DIR)
+# --- Compilation de l'application principale ---
+$(TARGET): $(CORE_OBJS) $(OBJ_DIR)/main.o
+	$(CC) $^ -o $@
 
-# Lier les fichiers objets pour créer l'exécutable
-$(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
+# --- Compilation des tests ---
+test: $(CORE_OBJS) $(OBJ_DIR)/test_bst.o
+	$(CC) $^ -o $(TEST_TARGET)
+	./$(TEST_TARGET)
 
-# Compiler chaque fichier .c en fichier .o
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+# --- Règles de compilation génériques ---
+
+# Compile les fichiers du dossier src/
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Cible pour nettoyer le projet (supprimer bin/ et obj/)
+# Compile les fichiers du dossier tests/
+$(OBJ_DIR)/%.o: $(TEST_DIR)/%.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
+
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
+	rm -rf $(OBJ_DIR) $(TARGET) $(TEST_TARGET)
 
-# Cible pour exécuter le programme (test simple)
-test: all
-	./$(TARGET)
-
-.PHONY: all clean test directories
+.PHONY: all clean test

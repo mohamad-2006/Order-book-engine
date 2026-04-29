@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "orderbook.h"
 
-Order* create_order(int id, OrderType type, OrderSide side, double price, int quantity) {
+/*Order* create_order(uint64_t id, OrderType type, OrderSide side, Price price, uint32_t quantity) {
     
     //Allocation dynamique de mémoire pour un nouvel ordre
     Order* new_order = (Order*)malloc(sizeof(Order));
@@ -22,6 +23,7 @@ Order* create_order(int id, OrderType type, OrderSide side, double price, int qu
     new_order->quantity = quantity;
     new_order->timestamp = time(NULL); // Stocke l'heure actuelle
     new_order->next = NULL; // Initialise le pointeur next à NULL
+    new_order->prev = NULL; // Initialise le pointeur prev à NULL
     return new_order;
 }
 
@@ -30,7 +32,7 @@ void free_order(Order* order) {
     {    
         //Libération de la mémoire allouée pour l'ordre
         free(order);
-        printf("Ordre %d libere avec succes.\n", order->id);
+        printf("Ordre %ld libere avec succes.\n", order->id);
     }
 
-}
+}*/
