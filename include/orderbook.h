@@ -1,26 +1,22 @@
 #ifndef ORDERBOOK_H
 #define ORDERBOOK_H
 
-#include <time.h>
+#include "rbtree.h"
+#include "hashtable.h"
 
-// Type d'ordre : LIMIT (prix fixe) ou MARKET (prix du marché)
-typedef enum { LIMIT, MARKET } OrderType;
+typedef struct OrderBook {
+    RBTree* bids;          // Arbre des acheteurs (trié décroissant idéalement)
+    RBTree* asks;          // Arbre des vendeurs (trié croissant)
+    HashTable* order_map;  // Pour trouver un ordre en O(1) via son ID
+} OrderBook;
 
-// Côté de l'ordre : ACHAT ou VENTE
-typedef enum { BUY, SELL } OrderSide;
+// Signatures
+OrderBook* orderbook_create();
+void orderbook_destroy(OrderBook* book);
 
-typedef struct Order {
-    int id;
-    OrderType type;
-    OrderSide side;
-    double price;
-    int quantity;
-    time_t timestamp;      // Stocke l'heure de création
-    struct Order* next;    // Pour la future liste chaînée
-} Order;
+// Les actions principales du moteur
+bool orderbook_add(OrderBook* book, Order* order);
+bool orderbook_cancel(OrderBook* book, uint64_t order_id);
+void orderbook_match(OrderBook* book); // Lance l'algorithme d'appariement
 
-// Prototypes des fonctions
-Order* create_order(int id, OrderType type, OrderSide side, double price, int quantity);
-void free_order(Order* order);
-
-#endif
+#endif // ORDERBOOK_H

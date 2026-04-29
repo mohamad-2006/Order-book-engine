@@ -1,5 +1,29 @@
 # Order-book-engine
 
+
+# C-Trade Engine Architecture
+
+This matching engine uses a high-performance data structure combining **Red-Black Trees** (for price-time priority ordering) and a **Hash Table** (for O(1) order cancellations). Prices are stored as integers (`int64_t`) to prevent floating-point precision loss.
+
+## System Architecture
+
+```text
+                     [ ORDER BOOK ]
+                           │
+      ┌────────────────────┼────────────────────┐
+      │                    │                    │
+[ BIDS (Buy) ]       [ ASKS (Sell) ]      [ ORDER MAP ]
+ Red-Black Tree       Red-Black Tree       Hash Table (by ID)
+      │                    │                    │
+      ▼                    ▼                    ▼
+(PriceLevel 100)     (PriceLevel 105)      [ ID: 45 ] ──┐
+  total_qty: 50        total_qty: 20       [ ID: 89 ]   │ (O(1) Lookup)
+      │                    │                            │
+      ├─► Order(id:12)     ├─► Order(id:45) ◄───────────┘
+      │     qty: 30        │     qty: 20
+      │                    │
+      └─► Order(id:89)     └─► NULL
+            qty: 20
 Overview
 
 This project is a high-performance Order Book Matching Engine written in C.
