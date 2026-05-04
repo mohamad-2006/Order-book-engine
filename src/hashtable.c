@@ -14,13 +14,13 @@ static uint32_t hash_fnv1a(uint64_t key) {
 
 // Crée une nouvelle table de hachage
 HashTable* hashtable_create(uint32_t size) {
-    HashTable* ht = (HashTable*)malloc(sizeof(HashTable));
+    HashTable* ht = malloc(sizeof(HashTable));
     if (!ht) return NULL;
 
     ht->size = size;
     ht->count = 0;
     // calloc initialise les pointeurs à NULL
-    ht->table = (Hashnode**)calloc(size, sizeof(Hashnode*));
+    ht->table = calloc(size, sizeof(Hashnode*));
     if (!ht->table) {
         free(ht);
         return NULL;
@@ -32,33 +32,38 @@ static void hashtable_resize(HashTable* ht) {
     uint32_t old_size = ht->size;
     Hashnode** old_table = ht->table;
 
-    ht->size *= 2; // Double la taille
-    ht->count = 0; // Réinitialise le compteur
-    ht->table = (Hashnode**)calloc(ht->size, sizeof(Hashnode*));
-
+    uint32_t new_size = ht->size * 2;
+    Hashnode** new_table = calloc(new_size, sizeof(Hashnode*));
+    if (!new_table) {
+        fprintf(stderr, "Erreur de réallocation de la table de hachage\n");
+        return; // On peut choisir de ne pas redimensionner si l'allocation échoue
+    }
 
     // Réinsérer les éléments dans la nouvelle table
     for (uint32_t i = 0; i < old_size; i++) {
         Hashnode* current = old_table[i];
-        while (current != NULL) {
+        while (current) {
             Hashnode* next = current->next; // Sauvegarde le prochain noeud
-            hashtable_insert(ht, current->order);
-            free(current);
+            uint32_t new_index = hash_fnv1a(current->order->id) & (new_size - 1);
+            current->next = new_table[new_index];
+            new_table[new_index] = current;
             current = next;
         }
     }
     free(old_table);
+    ht->table = new_table;
+    ht->size = new_size;
     printf("[Moteur] Rehashing effectue: Nouvelle taille = %u\n", ht->size);
 }
 
 bool hashtable_insert(HashTable* ht, Order* order) {
     if (!ht || !order) return false;
-    if ((float)(ht->count + 1) / ht->size > HT_LOAD_FACTOR) {
+    if ((float)(ht->count) / ht->size >= HT_LOAD_FACTOR) {
         hashtable_resize(ht);
     }
 
-    uint32_t index = hash_fnv1a(order->id) & (ht->size -1);
-    Hashnode* new_node = (Hashnode*)malloc(sizeof(Hashnode));
+    uint32_t index = hash_fnv1a(order->id) & (ht->size - 1);
+    Hashnode* new_node = malloc(sizeof(Hashnode));
     if (!new_node) return false;
 
     new_node->order = order;
@@ -69,10 +74,10 @@ bool hashtable_insert(HashTable* ht, Order* order) {
 }
 
 Order* hashtable_get(HashTable* ht, uint64_t id) {
-    if (!ht) return NULL;
-    uint32_t index = hash_fnv1a(id) & (ht->size -1);
+    if (!ht || !ht->table) return NULL;
+    uint32_t index = hash_fnv1a(id) & (ht->size - 1);
     Hashnode* current = ht->table[index];
-    while (current != NULL) {
+    while (current) {
         if (current->order->id == id) {
             return current->order;
         }
@@ -83,7 +88,7 @@ Order* hashtable_get(HashTable* ht, uint64_t id) {
 
 bool hashtable_remove(HashTable* ht, uint64_t id) {
     if (!ht) return false;
-    uint32_t index = hash_fnv1a(id) & (ht->size -1);
+    uint32_t index = hash_fnv1a(id) & (ht->size - 1);
     Hashnode* current = ht->table[index];
     Hashnode* prev = NULL;
 

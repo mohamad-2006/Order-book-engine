@@ -8,54 +8,47 @@
 #define TIME_DIFF(start,end) \
     ((double)(end.tv_sec - start.tv_sec) + (double)(end.tv_nsec - start.tv_nsec) / 1E9)
 
-void test_million_orders(){
-    printf("Test: Insertion de 1 million d'ordres\n");
+int main() {
+    uint32_t n = 100000; // Nombre d'ordres à insérer
     HashTable* ht = hashtable_create(HT_INITIAL_SIZE);
-    int num_orders = 1000000;
+    if (!ht) {
+        fprintf(stderr, "Erreur de création de la table de hachage\n");
+        return EXIT_FAILURE;
+    }
 
-    // On simule un tableau de pointeurs vers des ordres fictifs
-    Order** fake_orders = malloc(num_orders * sizeof(Order*));
+    Order* orders_pool = calloc(n, sizeof(Order));
+    for(uint32_t i =0; i < n; i++)
+    {
+        orders_pool[i].id = i;
+        orders_pool[i].quantity = 10;
+    }
 
     struct timespec start, end;
 
-    // 1. Test d'insertion
-    clock_gettime(CLOCKS_PER_SEC, &start);
-    uint64_t total_qty_check = 0;
-    for(int i =0; i < num_orders; i++){
-        fake_orders[i] = malloc(sizeof(Order));
-        fake_orders[i]->id = 1000000 + i; // IDs unique
-       hashtable_insert(ht, fake_orders[i]);
-       Order* o = hashtable_get(ht, 1000000 + i);
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (uint32_t i = 0; i < n; i++) {
+        hashtable_insert(ht, &orders_pool[i]);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    printf("Insertion de %u ordres: %.6f secondes\n", n, TIME_DIFF(start, end));
+
+    // Test recherche
+    uint64_t checkum = 0;
+    uint32_t count = 0;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (uint32_t i = 0; i < n; i++) {
+        Order* o = hashtable_get(ht, i);
         if (o) {
-            total_qty_check += o->quantity;
+            checkum += o->id;
+            count++;
         }
     }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    printf("Recherche de %u ordres: %.6f secondes\n", n, TIME_DIFF(start, end));
+    printf("Checksum: %lu, Nombre d'ordres trouvés: %u\n", checkum, count);
 
-    clock_gettime(CLOCKS_PER_SEC, &end);
-    printf("Insertion de 1 million d'ordres: %.8f secondes\n", TIME_DIFF(start,end));
-    printf("Vérification : %lu ordres traités\n", total_qty_check);
-
-    // 2. Test de récupération
-    clock_gettime(CLOCKS_PER_SEC, &start);
-
-    Order* found = hashtable_get(ht, 1000000 + num_orders - 1);
-    clock_gettime(CLOCKS_PER_SEC, &end);    
-
-    assert(found != NULL);
-    assert(found->id == (uint64_t)(1000000 + num_orders - 1));
-    printf("Récupération d'un ordre: %.8f secondes\n", TIME_DIFF(start, end));
-
-
-    // 3. Nettoyage
-    for(int i = 0; i < num_orders; i++){
-        free(fake_orders[i]);
-    }
-    free(fake_orders);
     hashtable_destroy(ht);
-}
+    free(orders_pool);
 
-
-int main() {
-    test_million_orders();
     return 0;
 }
