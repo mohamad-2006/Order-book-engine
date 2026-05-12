@@ -2,6 +2,12 @@
 #define ORDER_H
 
 #include "types.h"
+#include <stdint.h>
+
+typedef long Price;
+
+struct PriceLevel;
+
 
 typedef struct Order {
     uint64_t id;
@@ -9,6 +15,8 @@ typedef struct Order {
     OrderSide side;
     Price price;
     uint32_t quantity;
+    struct PriceLevel* level;
+    
     TIMESTAMP timestamp;      // Stocke l'heure de création
     struct Order* next;    // Pour la future liste chaînée
     struct Order* prev;    // Pour la future liste chaînée   

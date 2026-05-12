@@ -1,5 +1,6 @@
 #ifndef RBTREE_H
 #define RBTREE_H
+#include <stddef.h>
 
 #include "order.h"
 typedef enum { RED, BLACK } NodeColor;
@@ -7,7 +8,7 @@ typedef enum { RED, BLACK } NodeColor;
 // Representation d'un niveau de prix (un noeud de l'arbre rouge-noir)
 
 typedef struct PriceLevel {
-    Price price;           // Prix du niveau
+    Price price;          // Prix du niveau
     uint32_t quantity;     // Quantité totale à ce prix
     Order* head_orders;        // Premier ordre à ce niveau de prix (liste chaînée d'ordres)
     Order* tail_orders;        // Dernier ordre à ce niveau de prix (pour faciliter l'ajout d'ordres)
@@ -26,10 +27,13 @@ typedef struct RBTree {
 
 // Sigantures
 RBTree* create_rbtree();
-PriceLevel* rbtree_insert(RBTree* tree, Price price);
-void rbtree_delete(RBTree* tree, Price price);
-PriceLevel* rbtree_find(RBTree* tree, Price price);
+PriceLevel* rbtree_insert(RBTree* tree, Price level);
+void rbtree_delete(RBTree* tree, PriceLevel* level);
+PriceLevel* rbtree_find(RBTree* tree, Price level);
 PriceLevel* rbtree_minimum(PriceLevel* node);
 PriceLevel* rbtree_maximum(PriceLevel* node);
+void dll_push_back(PriceLevel* level, Order* order);
+void dll_remove_order(PriceLevel* level, Order* order);
+Order* dll_front(PriceLevel* level);
 
 #endif

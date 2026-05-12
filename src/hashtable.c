@@ -77,7 +77,7 @@ Order* hashtable_get(HashTable* ht, uint64_t id) {
     if (!ht || !ht->table) return NULL;
     uint32_t index = hash_fnv1a(id) & (ht->size - 1);
     Hashnode* current = ht->table[index];
-    while (current) {
+    while (current != NULL) {
         if (current->order->id == id) {
             return current->order;
         }

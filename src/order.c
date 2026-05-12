@@ -13,6 +13,7 @@ Order* create_order(uint64_t id, OrderType type, OrderSide side, Price price, ui
     new_order->price = price;
     new_order->quantity = quantity;
     new_order->timestamp = time(NULL);
+    new_order->level = NULL;
     new_order->prev = NULL;
     new_order->next = NULL;
 
