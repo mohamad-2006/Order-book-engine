@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -Iinclude -O0
+CFLAGS = -Wall -Wextra -O3 -march=native -Iinclude
 SRC_DIR = src
 OBJ_DIR = obj
 TEST_DIR = tests
@@ -9,7 +9,7 @@ TEST_DIR = tests
 HEADERS = $(wildcard include/*.h)
 
 # 2. On définit les fichiers de logique (Correction du doublon de orderbook.c)
-CORE_SRCS = $(SRC_DIR)/orderbook.c $(SRC_DIR)/order.c $(SRC_DIR)/rbtree.c $(SRC_DIR)/hashtable.c $(SRC_DIR)/mempool.c
+CORE_SRCS = $(SRC_DIR)/orderbook.c $(SRC_DIR)/order.c $(SRC_DIR)/rbtree.c $(SRC_DIR)/hashtable.c $(SRC_DIR)/mempool.c $(SRC_DIR)/parser.c
 CORE_OBJS = $(CORE_SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 # 3. Cibles finales

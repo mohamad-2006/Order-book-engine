@@ -35,5 +35,6 @@ PriceLevel* rbtree_maximum(PriceLevel* node);
 void dll_push_back(PriceLevel* level, Order* order);
 void dll_remove_order(PriceLevel* level, Order* order);
 Order* dll_front(PriceLevel* level);
+void rbtree_destroy(PriceLevel* node);
 
 #endif

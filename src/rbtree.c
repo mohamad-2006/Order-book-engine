@@ -178,3 +178,15 @@ Order* dll_front(PriceLevel* level){
     if(!level) return NULL;
     return level->head_orders;
 }
+
+void rbtree_destroy(PriceLevel* node) {
+    if (node == NULL) return; // NIL si tu utilises des sentinelles
+
+    // Parcours post-ordre : on nettoie les enfants avant le parent
+    rbtree_destroy(node->left);
+    rbtree_destroy(node->right);
+    
+    // Si ton Node contient un PriceLevel, libère-le ici
+    // free(node->price_level); 
+    free(node);
+}

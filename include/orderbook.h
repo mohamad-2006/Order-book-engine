@@ -19,7 +19,7 @@ typedef struct OrderBook {
 OrderBook* orderbook_create(size_t max_orders);
 
 // Les actions principales du moteur
-void orderbook_add_order(OrderBook* book, uint64_t order_id, OrderSide side, long price, uint32_t quantity);
+void orderbook_add_order(OrderBook* book, uint64_t order_id, OrderType type, OrderSide side, long price, uint32_t quantity);
 void orderbook_cancel_order(OrderBook* book, uint64_t order_id); // Lance l'algorithme d'appariement
 
 #endif // ORDERBOOK_H
