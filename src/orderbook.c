@@ -3,6 +3,7 @@
 #include "orderbook.h"
 #include "rbtree.h"
 #include "trade.h"
+#include "errors.h"
 #include <time.h>
 
 OrderBook* orderbook_create(size_t max_orders) {
@@ -120,7 +121,7 @@ void orderbook_add_order(OrderBook* book, uint64_t id, OrderType type, OrderSide
     order->side = side;
     order->price = price;
     order->quantity = quantity;
-    order->type = (price == 0) ? MARKET : LIMIT;
+    order->type = type;
     order->timestamp = time(NULL);
     order->level = NULL;
     order->next = NULL;
@@ -143,9 +144,9 @@ void orderbook_add_order(OrderBook* book, uint64_t id, OrderType type, OrderSide
     hashtable_insert(book->order_map, order);
 }
 
-void orderbook_cancel_order(OrderBook* book, uint64_t id) {
+EngineStatus orderbook_cancel_order(OrderBook* book, uint64_t id) {
     Order* order = hashtable_get(book->order_map, id);
-    if (!order) return;
+    if (!order) return ERR_ORDER_NOT_FOUND;
 
     PriceLevel* level = order->level;
     
@@ -161,6 +162,7 @@ void orderbook_cancel_order(OrderBook* book, uint64_t id) {
 
     // Recyclage de la mémoire
     pool_free(book->pool, order);
+    return ENGINE_SUCCESS;
 }
 
 void orderbook_destroy(OrderBook* book) {
