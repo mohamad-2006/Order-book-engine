@@ -6,12 +6,21 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#include <stdbool.h>
 #include "orderbook.h"
 
-#define TIME_DIFF(start, end)\
+#define TIME_DIFF(start, end) \
     ((double)(end.tv_sec - start.tv_sec) + (double)(end.tv_nsec - start.tv_nsec) / 1E9)
 
-// Parsing d'entier ultra-rapide
+// Structure temporaire pour stocker les ordres lus avant de les matcher
+typedef struct {
+    uint64_t id;
+    OrderSide side;
+    OrderType type;
+    long price;
+    uint32_t qty;
+} TempOrder;
+
 static inline uint64_t parse_uint64(char** cursor) {
     uint64_t res = 0;
     while (**cursor >= '0' && **cursor <= '9') {
@@ -21,7 +30,7 @@ static inline uint64_t parse_uint64(char** cursor) {
     return res;
 }
 
-void load_and_match_csv(OrderBook* book, const char* filepath) {
+void load_and_match_csv(OrderBook* book, const char* filepath, EngineStats* stats, bool verbose) {
     int fd = open(filepath, O_RDONLY);
     if (fd == -1) {
         perror("Erreur d'ouverture du fichier CSV");
@@ -31,72 +40,74 @@ void load_and_match_csv(OrderBook* book, const char* filepath) {
     struct stat sb;
     if (fstat(fd, &sb) == -1) {
         perror("Erreur fstat");
-        close(fd);
-        return;
+        close(fd); return;
     }
 
-    // Mapping du fichier en memoire
     char* data = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (data == MAP_FAILED) {
         perror("Erreur mmap");
-        close(fd);
-        return;
+        close(fd); return;
     }
-    
+
     char* cursor = data;
     char* end = data + sb.st_size;
 
-    // Ignorer la ligne d'en-tete du CSV
-    while (cursor < end && *cursor != '\n') {
-        cursor++;
-    }
+    // Sauter l'en-tête
+    while (cursor < end && *cursor != '\n') cursor++;
     if (cursor < end) cursor++;
 
-    struct timespec start_time, end_time;
-    clock_gettime(CLOCK_MONOTONIC, &start_time);
-
+    // On prépare un tableau pour stocker 1 Million d'ordres
+    uint32_t max_orders = 1000000;
+    TempOrder* buffer = malloc(max_orders * sizeof(TempOrder));
+    
+    struct timespec t0, t1, t2, t3;
     uint32_t parsed_count = 0;
 
-    // Boucle de parsing caractère par caractère
-    while (cursor < end) {
-        // Format attendu : order_id, side, type, price, quantity, timestamp\n
-        uint64_t id = parse_uint64(&cursor);
-        cursor++; // sauter la virgule ','
+    // ==========================================
+    // PHASE 1 : LECTURE DU CSV (PARSING)
+    // ==========================================
+    clock_gettime(CLOCK_MONOTONIC, &t0);
 
-        OrderSide side = (OrderSide)parse_uint64(&cursor);
-        cursor++;
+    while (cursor < end && parsed_count < max_orders) {
+        buffer[parsed_count].id = parse_uint64(&cursor); cursor++;
+        buffer[parsed_count].side = (OrderSide)parse_uint64(&cursor); cursor++;
+        buffer[parsed_count].type = (OrderType)parse_uint64(&cursor); cursor++;
+        buffer[parsed_count].price = (long)parse_uint64(&cursor); cursor++;
+        buffer[parsed_count].qty = (uint32_t)parse_uint64(&cursor); cursor++;
+        
+        uint64_t ts = parse_uint64(&cursor); (void)ts;
 
-        OrderType type = (OrderType)parse_uint64(&cursor);
-        cursor++;
-
-        long price = (long)parse_uint64(&cursor);
-        cursor++;
-
-        uint32_t quantity = (uint32_t)parse_uint64(&cursor);
-        cursor++;
-
-        uint64_t ts = parse_uint64(&cursor);
-
-        // Gérer le retour à la ligne (Windows \r\n ou Linux \n)
         if (cursor < end && *cursor == '\r') cursor++;
         if (cursor < end && *cursor == '\n') cursor++;
 
-        // 3. Injection directe dans le moteur de matching
-        // (Aucun malloc n'est fait ici, tout part dans le Mempool !)
-        orderbook_add_order(book, id, type, side, price, quantity);
         parsed_count++;
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &end_time);
-    printf("🏁 Parsing & Matching terminé !\n");
-    printf("   Ordres traités : %u\n", parsed_count);
-    printf("   Temps total    : %.6f secondes\n", TIME_DIFF(start_time, end_time));
-    printf("   Vitesse        : %.0f ordres/sec\n", parsed_count / TIME_DIFF(start_time, end_time));
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    stats->csv_load_time = TIME_DIFF(t0, t1);
 
-    // Nettoyage de la mémoire virtuelle
+    // ==========================================
+    // PHASE 2 : INJECTION DANS LE MOTEUR
+    // ==========================================
+    clock_gettime(CLOCK_MONOTONIC, &t2);
+
+    for (uint32_t i = 0; i < parsed_count; i++) {
+        if (verbose && (i % 100000 == 0)) {
+            printf("[Verbose] Traitement de l'ordre %u / %u...\n", i, parsed_count);
+        }
+        orderbook_add_order(book, buffer[i].id, buffer[i].type, buffer[i].side, buffer[i].price, buffer[i].qty);
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &t3);
+    stats->matching_time = TIME_DIFF(t2, t3);
+    
+    // Remplir les stats finales
+    stats->total_time = stats->csv_load_time + stats->matching_time;
+    stats->total_orders = parsed_count;
+    stats->total_trades = book->trade_count;
+
+    // Nettoyage
+    free(buffer);
     munmap(data, sb.st_size);
     close(fd);
-    
 }
-
-

@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O3 -march=native -Iinclude
+CFLAGS = -Wall -Wextra -O3 -pg -march=native -Iinclude
+LDFLAGS = -pg
 SRC_DIR = src
 OBJ_DIR = obj
 TEST_DIR = tests
@@ -26,6 +27,8 @@ $(TARGET): $(CORE_OBJS) $(OBJ_DIR)/main.o
 test: $(CORE_OBJS) $(OBJ_DIR)/test_orderbook.o
 	$(CC) $^ -o $(TEST_TARGET)
 	./$(TEST_TARGET)
+	$(OBJS)
+	gcc -pg $(OBJS) -o $(EXEC) 
 
 # --- Règles de compilation génériques ---
 

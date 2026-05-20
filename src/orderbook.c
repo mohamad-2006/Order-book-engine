@@ -5,13 +5,6 @@
 #include "trade.h"
 #include <time.h>
 
-//Fonction utilitaire simple pour afficher le trade
-/*static void log_trade(uint64_t buyer_id, uint64_t seller_id, Price price, uint32_t qty) {
-    // Plus tard, on écrira ça dans un fichier CSV ou binaire pour la vitesse
-    printf("⚡ TRADE | Achat #%lu <> Vente #%lu | Prix: %ld | Qty: %u\n", 
-           buyer_id, seller_id, price, qty);
-}*/
-
 OrderBook* orderbook_create(size_t max_orders) {
     OrderBook* book = calloc(1, sizeof(OrderBook));
     if (!book) return NULL;
@@ -25,67 +18,95 @@ OrderBook* orderbook_create(size_t max_orders) {
 }
 
 void match_order(OrderBook* book, Order* incoming) {
-    if (!book || !incoming) return;
+    if (incoming->side == BUY) {
+        // Un acheteur veut matcher avec les vendeurs les moins chers (asks)
+        while (incoming->quantity > 0) {
+            PriceLevel* best_ask = rbtree_minimum(book->asks->root);
+            if (!best_ask) break; // Plus de vendeurs
+            
+            if (incoming->price < best_ask->price && incoming->type != MARKET) break;
 
-    RBTree* opposite_tree = (incoming->side == BUY) ? book->asks : book->bids;
+            Order* limit_order = best_ask->head_orders;
+            while (limit_order && incoming->quantity > 0) {
+                uint32_t match_qty = (incoming->quantity < limit_order->quantity) ? incoming->quantity : limit_order->quantity;
+                
+                incoming->quantity -= match_qty;
+                limit_order->quantity -= match_qty;
+                book->trade_count++; 
 
-    while (incoming->quantity > 0) {
+                if (limit_order->quantity == 0) {
+                    Order* to_free = limit_order;
+                    limit_order = limit_order->next;
+                    
+                    // 🔥 CORRECTION DLL_REMOVE INLINE : On détache l'ordre proprement
+                    if (to_free->prev) {
+                        to_free->prev->next = to_free->next;
+                    } else {
+                        best_ask->head_orders = to_free->next; // C'était le premier élément
+                    }
+                    if (to_free->next) {
+                        to_free->next->prev = to_free->prev;
+                    }
 
-        // 1. Trouver meilleur prix opposé
-        PriceLevel* best_level = (incoming->side == BUY)
-            ? rbtree_minimum(opposite_tree->root)   // meilleur ASK
-            : rbtree_maximum(opposite_tree->root);  // meilleur BID
+                    // Note : Si ton projet utilise 'hashtable_delete' ou un autre nom,
+                    // adapte cette ligne selon ton include/hashtable.h
+                    hashtable_remove(book->order_map, to_free->id); 
+                    
+                    pool_free(book->pool, to_free);
+                } else {
+                    limit_order = limit_order->next;
+                }
+            }
 
-        if (!best_level) break;
-
-        // 2. Vérifier condition de match
-        int match = 0;
-
-        if (incoming->type == MARKET) {
-            match = 1;
-        } else if (incoming->side == BUY && incoming->price >= best_level->price) {
-            match = 1;
-        } else if (incoming->side == SELL && incoming->price <= best_level->price) {
-            match = 1;
+            // Si le niveau de prix est vide, on le supprime de l'arbre
+            if (best_ask->head_orders == NULL) {
+                // 🔥 CORRECTION : On passe 'best_ask' (le pointeur) au lieu de 'best_ask->price'
+                rbtree_delete(book->asks, best_ask);
+            }
         }
+    } 
+    else {
+        // Un vendeur veut matcher avec les acheteurs les plus chers (bids)
+        while (incoming->quantity > 0) {
+            PriceLevel* best_bid = rbtree_maximum(book->bids->root);
+            if (!best_bid) break; // Plus d'acheteurs
+            
+            if (incoming->price > best_bid->price && incoming->type != MARKET) break;
 
-        if (!match) break;
+            Order* limit_order = best_bid->head_orders;
+            while (limit_order && incoming->quantity > 0) {
+                uint32_t match_qty = (incoming->quantity < limit_order->quantity) ? incoming->quantity : limit_order->quantity;
+                
+                incoming->quantity -= match_qty;
+                limit_order->quantity -= match_qty;
+                book->trade_count++; 
 
-        // 3. Prendre le premier ordre FIFO
-        Order* resting = dll_front(best_level);
-        if (!resting) break;
+                if (limit_order->quantity == 0) {
+                    Order* to_free = limit_order;
+                    limit_order = limit_order->next;
+                    
+                    // 🔥 CORRECTION DLL_REMOVE INLINE
+                    if (to_free->prev) {
+                        to_free->prev->next = to_free->next;
+                    } else {
+                        best_bid->head_orders = to_free->next;
+                    }
+                    if (to_free->next) {
+                        to_free->next->prev = to_free->prev;
+                    }
 
-        // 4. Calcul quantité exécutée
-        uint32_t traded_qty = (incoming->quantity < resting->quantity)
-            ? incoming->quantity
-            : resting->quantity;
+                    hashtable_remove(book->order_map, to_free->id); 
+                    
+                    pool_free(book->pool, to_free);
+                } else {
+                    limit_order = limit_order->next;
+                }
+            }
 
-        // 5. Créer trade
-        Trade trade;
-        trade.buyer_id  = (incoming->side == BUY) ? incoming->id : resting->id;
-        trade.seller_id = (incoming->side == SELL) ? incoming->id : resting->id;
-        trade.price     = best_level->price;
-        trade.quantity  = traded_qty;
-        trade.timestamp = time(NULL);
-
-        /*printf("TRADE: BUYER=%lu SELLER=%lu PRICE=%ld QTY=%u\n",
-               trade.buyer_id, trade.seller_id, trade.price, trade.quantity);*/
-
-        // 6. Update quantités
-        incoming->quantity -= traded_qty;
-        resting->quantity -= traded_qty;
-        best_level->quantity -= traded_qty;
-
-        // 7. Si ordre du carnet fini
-        if (resting->quantity == 0) {
-            dll_remove_order(best_level, resting);
-            hashtable_remove(book->order_map, resting->id);
-            pool_free(book->pool, resting);
-        }
-
-        // 8. Si niveau vide → delete
-        if (best_level->head_orders == NULL) {
-            rbtree_delete(opposite_tree, best_level);
+            if (best_bid->head_orders == NULL) {
+                // 🔥 CORRECTION : On passe 'best_bid' directement
+                rbtree_delete(book->bids, best_bid);
+            }
         }
     }
 }
@@ -168,4 +189,31 @@ void orderbook_destroy(OrderBook* book) {
 
     // 4. Enfin, libérer la structure principale
     free(book);
+}
+
+// Fonction utilitaire pour compter la profondeur (nombre de nœuds dans l'arbre)
+int get_tree_depth(PriceLevel* node) {
+    if (node == NULL) return 0;
+    return 1 + get_tree_depth(node->left) + get_tree_depth(node->right);
+}
+
+void display_book_state(OrderBook* book) {
+    // Extraction des meilleurs prix (Dépend de tes fonctions rbtree_minimum/maximum)
+    PriceLevel* best_bid_node = rbtree_maximum(book->bids->root); // Plus cher acheteur
+    PriceLevel* best_ask_node = rbtree_minimum(book->asks->root); // Moins cher vendeur
+
+    long best_bid = best_bid_node ? best_bid_node->price : 0;
+    long best_ask = best_ask_node ? best_ask_node->price : 0;
+    long spread = (best_bid > 0 && best_ask > 0) ? (best_ask - best_bid) : 0;
+
+    int bid_depth = get_tree_depth(book->bids->root);
+    int ask_depth = get_tree_depth(book->asks->root);
+
+    printf("\n📊 --- ÉTAT FINAL DU CARNET ---\n");
+    printf("   Meilleur Bid (Achat) : %ld\n", best_bid);
+    printf("   Meilleur Ask (Vente) : %ld\n", best_ask);
+    printf("   Spread Spécifié      : %ld ticks\n", spread);
+    printf("   Profondeur des Bids  : %d niveaux de prix\n", bid_depth);
+    printf("   Profondeur des Asks  : %d niveaux de prix\n", ask_depth);
+    printf("--------------------------------\n");
 }

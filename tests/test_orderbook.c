@@ -1,48 +1,66 @@
-#include "orderbook.h"
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
+#include <stdbool.h>
+#include "orderbook.h"
 
-/*void test_matching() {
-    printf("--- DEMARRAGE DU MOTEUR DE MATCHING ---\n\n");
-    OrderBook* book = orderbook_create(1000);
+int main(int argc, char* argv[]) {
+    char* input_filepath = NULL;
+    bool verbose_mode = false;
+    bool stats_mode = false;
 
-    // 1. On place des vendeurs patients (Makers)
-    printf("[1] Ajout d'un Vendeur à 15100 (Qté: 10)\n");
-    orderbook_add_order(book, 1, SELL, 15100, 10);
+    // Configuration des arguments du terminal
+    static struct option long_options[] = {
+        {"input",   required_argument, 0, 'i'},
+        {"verbose", no_argument,       0, 'v'},
+        {"stats",   no_argument,       0, 's'},
+        {"help",    no_argument,       0, 'h'},
+        {0, 0, 0, 0}
+    };
+
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, "i:vsh", long_options, &option_index)) != -1) {
+        switch (opt) {
+            case 'i': input_filepath = optarg; break;
+            case 'v': verbose_mode = true; break;
+            case 's': stats_mode = true; break;
+            case 'h':
+            default:
+                printf("Usage: %s --input <file.csv> [--verbose] [--stats]\n", argv[0]);
+                return (opt == 'h') ? 0 : 1;
+        }
+    }
+
+    // Si on a oublié de donner un fichier, on quitte.
+    if (!input_filepath) {
+        fprintf(stderr, "❌ Erreur : L'option --input <fichier.csv> est obligatoire.\n");
+        return 1;
+    }
+
+    // Création du carnet
+    OrderBook* book = orderbook_create(1000000); // 1 Million d'ordres
+    EngineStats stats = {0};
+
+    printf("🚀 Lancement du moteur sur '%s'...\n", input_filepath);
     
-    printf("[2] Ajout d'un Vendeur à 15000 (Qté: 5) -> Le meilleur prix !\n");
-    orderbook_add_order(book, 2, SELL, 15000, 5); 
+    // Appel de la fonction de notre parser.c
+    load_and_match_csv(book, input_filepath, &stats, verbose_mode);
 
-    printf("\n[3] Arrivee d'un Acheteur agressif (Taker) prêt à payer 15050 pour 10 parts...\n");
-    // Il va matcher avec le Vendeur 2 (car 15000 < 15050), mais il restera bloqué pour le Vendeur 1 (15100 > 15050)
-    orderbook_add_order(book, 3, BUY, 15050, 10);
+    // Affichage du tableau de bord si --stats est demandé
+    if (stats_mode) {
+        printf("\n⏱️  --- RAPPORT DE PERFORMANCE ---\n");
+        printf("   Ordres traités       : %u\n", stats.total_orders);
+        printf("   Trades générés       : %u\n", stats.total_trades);
+        printf("   Temps Chargement CSV : %.6f secondes\n", stats.csv_load_time);
+        printf("   Temps Matching Pur   : %.6f secondes\n", stats.matching_time);
+        printf("   Temps Total Exec     : %.6f secondes\n", stats.total_time);
+        if (stats.matching_time > 0) {
+            printf("   Débit Matching       : %.0f ordres/sec\n", stats.total_orders / stats.matching_time);
+        }
+        printf("---------------------------------\n");
+    }
 
-    // 4. Vérifications mathématiques
-    Order* acheteur = hashtable_get(book->order_map, 3);
-    assert(acheteur != NULL);
-    
-    // L'acheteur voulait 10 parts. Il en a trouvé 5 à bon prix. Il doit lui en rester 5 en attente.
-    assert(acheteur->quantity == 5); 
-    
-    // Le vendeur 2 a été totalement dévoré, il ne doit plus exister !
-    assert(hashtable_get(book->order_map, 2) == NULL);
-
-    printf("\nSUCCES : Le matching fonctionne, l'assert mathematique est valide !\n");
-    
-    free(book);
-}*/
-void load_and_match_csv(OrderBook* book, const char* filepath);
-
-int main() {
-    // On alloue un grand pool de 1 million d'ordres pour éviter les pannes mémoire
-    OrderBook* book = orderbook_create(1000000); 
-
-    printf("🚀 Lancement du test sur 1 Million d'ordres...\n");
-    load_and_match_csv(book, "orders_1M.csv");
-
-    // Si tu as gardé tes printf dans match_order, tu devras peut-être les 
-    // commenter pour ce test, car faire 500 000 printf() dans le terminal va 
-    // ralentir ton C (l'I/O console est très lente !).
+    orderbook_destroy(book);
     return 0;
 }

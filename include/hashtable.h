@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define HT_INITIAL_SIZE 65536 // Taille initiale de la table de hachage
+#define HT_INITIAL_SIZE 2097152 // Taille initiale de la table de hachage
 #define HT_LOAD_FACTOR 0.75 // Facteur de charge pour redimensionner la table
 
 // Noeud pour gerer les collisions dans la table de hachage
