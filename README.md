@@ -42,7 +42,7 @@ The engine is highly optimized, utilizing custom memory pools, `-O3` compiler op
       │     qty: 30        │     qty: 20
       │                    │
       └─► Order(id:89)     └─► NULL
-            qty: 20
+            qty: 20   
 Overview
 
 This project is a high-performance Order Book Matching Engine written in C.
@@ -114,7 +114,6 @@ order-book/
 └── README.md
 
 
-
 Matching Logic
 Buy Order Execution
 
@@ -132,21 +131,31 @@ Orders can be:
 Fully filled
 Partially filled
 Remaining quantity stays in the book
+```
 
+## 📊 Installation & Usage
 
+1. Build the Engine
+Clone the repository and compile using make:
 
+```Bash
 
+```
 
+## 2. Run the Benchmark
+To run the engine on a dataset and view the performance statistics:
 
+```bash
+./test_orderbook --input tests/data/orders_1M.csv --stats
+```
 
+## 3. Run the Regression Test Suite
 
+The project includes a robust CI-like testing script validating logic, determinism, and memory safety:
 
-
-
-
-
-
-
+```bash
+./tests/run_tests.sh
+```
 
 Why This Project Matters
 
