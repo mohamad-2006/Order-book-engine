@@ -55,6 +55,7 @@ PriceLevel* rbtree_insert(RBTree* tree, Price price) {
     }
 
     PriceLevel* new_node = create_price_level(price);
+    if (!new_node) return NULL;
     new_node->parent = parent;
 
     if(parent == NULL)
@@ -131,53 +132,6 @@ PriceLevel* rbtree_maximum(PriceLevel* node) {
     return node;
 }
 
-
-void dll_push_back(PriceLevel* level, Order* order){
-    if (!level || !order) return;
-    
-    order->level = level;
-    order->next = NULL;
-    order->prev = level->tail_orders;
-
-    if (level->tail_orders) {
-        level->tail_orders->next = order;
-    }
-    else{
-        level->head_orders = order;
-    }
-
-    level->tail_orders = order;
-    level->quantity += order->quantity;
-}
-
-void dll_remove_order(PriceLevel* level, Order* order){
-    if (!level || !order) return;
-
-    if (order->prev){
-        order->prev->next = order->next;
-    }
-    else {
-        level->head_orders =order->next;
-    }
-
-    if (order->next){
-        order->next->prev = order->prev;
-    }
-    else{
-        level->tail_orders = order->prev;
-    }
-
-    level->quantity -= order->quantity;
-
-    order->next = NULL;
-    order->prev = NULL;
-    order->level = NULL;
-}
-
-Order* dll_front(PriceLevel* level){
-    if(!level) return NULL;
-    return level->head_orders;
-}
 
 void rbtree_destroy(PriceLevel* node) {
     if (node == NULL) return; // NIL si tu utilises des sentinelles

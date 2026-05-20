@@ -15,6 +15,11 @@ OrderBook* orderbook_create(size_t max_orders) {
     book->order_map = hashtable_create(HT_INITIAL_SIZE);
     book->pool = pool_create(max_orders);
 
+    if (!book->bids || !book->asks || !book->order_map || !book->pool) {
+        orderbook_destroy(book);
+        return NULL;
+    }
+
     return book;
 }
 
@@ -139,9 +144,19 @@ void orderbook_add_order(OrderBook* book, uint64_t id, OrderType type, OrderSide
     // Sinon → insertion dans carnet
     RBTree* tree = (side == BUY) ? book->bids : book->asks;
     PriceLevel* level = rbtree_insert(tree, price);
+    if (!level) {
+        pool_free(book->pool, order);
+        return;
+    }
 
     dll_push_back(level, order);
-    hashtable_insert(book->order_map, order);
+    if (!hashtable_insert(book->order_map, order)) {
+        dll_remove_order(level, order);
+        if (level->quantity == 0) {
+            rbtree_delete(tree, level);
+        }
+        pool_free(book->pool, order);
+    }
 }
 
 EngineStatus orderbook_cancel_order(OrderBook* book, uint64_t id) {

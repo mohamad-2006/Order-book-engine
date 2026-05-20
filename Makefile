@@ -12,7 +12,7 @@ TEST_DIR = tests
 HEADERS = $(wildcard include/*.h)
 
 # 2. Fichiers de logique (le cœur du moteur)
-CORE_SRCS = $(SRC_DIR)/orderbook.c $(SRC_DIR)/order.c $(SRC_DIR)/rbtree.c $(SRC_DIR)/hashtable.c $(SRC_DIR)/mempool.c $(SRC_DIR)/parser.c
+CORE_SRCS = $(SRC_DIR)/orderbook.c $(SRC_DIR)/order.c $(SRC_DIR)/rbtree.c $(SRC_DIR)/hashtable.c $(SRC_DIR)/mempool.c $(SRC_DIR)/parser.c $(SRC_DIR)/dll.c
 CORE_OBJS = $(CORE_SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 # 3. Cibles finales

@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     int opt;
     int option_index = 0;
 
-    while ((opt = getopt_long(argc, argv, "i:vsh", long_otpions, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "i:vsh", long_options, &option_index)) != -1) {
         switch (opt) {
             case 'i':
                 input_filepath = optarg;

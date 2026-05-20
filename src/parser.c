@@ -21,9 +21,9 @@ typedef struct {
     uint32_t qty;
 } TempOrder;
 
-static inline uint64_t parse_uint64(char** cursor) {
+static inline uint64_t parse_uint64(char** cursor, const char* end) {
     uint64_t res = 0;
-    while (**cursor >= '0' && **cursor <= '9') {
+    while (*cursor < end && **cursor >= '0' && **cursor <= '9') {
         res = (res * 10) + (**cursor - '0');
         (*cursor)++;
     }
@@ -59,6 +59,12 @@ void load_and_match_csv(OrderBook* book, const char* filepath, EngineStats* stat
     // On prépare un tableau pour stocker 1 Million d'ordres
     uint32_t max_orders = 1000000;
     TempOrder* buffer = malloc(max_orders * sizeof(TempOrder));
+    if (!buffer) {
+        perror("Erreur d'allocation du buffer temporaire");
+        munmap(data, sb.st_size);
+        close(fd);
+        return;
+    }
     
     struct timespec t0, t1, t2, t3;
     uint32_t parsed_count = 0;
@@ -69,13 +75,22 @@ void load_and_match_csv(OrderBook* book, const char* filepath, EngineStats* stat
     clock_gettime(CLOCK_MONOTONIC, &t0);
 
     while (cursor < end && parsed_count < max_orders) {
-        buffer[parsed_count].id = parse_uint64(&cursor); cursor++;
-        buffer[parsed_count].side = (OrderSide)parse_uint64(&cursor); cursor++;
-        buffer[parsed_count].type = (OrderType)parse_uint64(&cursor); cursor++;
-        buffer[parsed_count].price = (long)parse_uint64(&cursor); cursor++;
-        buffer[parsed_count].qty = (uint32_t)parse_uint64(&cursor); cursor++;
+        buffer[parsed_count].id = parse_uint64(&cursor, end);
+        if (cursor < end) cursor++;
         
-        uint64_t ts = parse_uint64(&cursor); (void)ts;
+        buffer[parsed_count].side = (OrderSide)parse_uint64(&cursor, end);
+        if (cursor < end) cursor++;
+        
+        buffer[parsed_count].type = (OrderType)parse_uint64(&cursor, end);
+        if (cursor < end) cursor++;
+        
+        buffer[parsed_count].price = (long)parse_uint64(&cursor, end);
+        if (cursor < end) cursor++;
+        
+        buffer[parsed_count].qty = (uint32_t)parse_uint64(&cursor, end);
+        if (cursor < end) cursor++;
+        
+        uint64_t ts = parse_uint64(&cursor, end); (void)ts;
 
         if (cursor < end && *cursor == '\r') cursor++;
         if (cursor < end && *cursor == '\n') cursor++;

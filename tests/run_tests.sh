@@ -11,7 +11,7 @@ echo "🔨 Compilation des tests..."
 make clean > /dev/null
 
 # On compile LES DEUX cibles et on retire -march=native pour Valgrind
-make test_logic test CFLAGS="-Wall -Wextra -O2 -pg -Iinclude" > /dev/null
+make test_logic test CFLAGS="-Wall -Wextra -O2 -Iinclude" LDFLAGS="" > /dev/null
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Échec de la compilation.${NC}"
