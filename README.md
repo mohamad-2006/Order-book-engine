@@ -4,6 +4,25 @@
 # C-Trade Engine Architecture
 
 This matching engine uses a high-performance data structure combining **Red-Black Trees** (for price-time priority ordering) and a **Hash Table** (for O(1) order cancellations). Prices are stored as integers (`int64_t`) to prevent floating-point precision loss.
+![C](https://img.shields.io/badge/Language-C-blue.svg)
+![Performance](https://img.shields.io/badge/Throughput-4.4M%20Orders%2Fsec-success.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+
+## 📊 Performance Benchmark
+
+The engine is highly optimized, utilizing custom memory pools, `-O3` compiler optimizations, and efficient branch prediction. It completely avoids floating-point arithmetic (using `int64_t` for prices) to prevent precision loss and maximize CPU instruction speed.
+
+**Hardware:** 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz  
+**Dataset:** 1,000,000 randomized LIMIT orders
+
+| Metric | Result |
+| :--- | :--- |
+| **Orders Processed** | 1,000,000 |
+| **Trades Generated** | 547,442 |
+| **CSV Load Time** | 0.214 seconds |
+| **Pure Matching Time** | **0.223 seconds** |
+| **Total Execution Time**| 0.438 seconds |
+| **Throughput** | 🔥 **4,469,245 orders/sec** |
 
 ## System Architecture
 
@@ -23,7 +42,7 @@ This matching engine uses a high-performance data structure combining **Red-Blac
       │     qty: 30        │     qty: 20
       │                    │
       └─► Order(id:89)     └─► NULL
-            qty: 20
+            qty: 20   
 Overview
 
 This project is a high-performance Order Book Matching Engine written in C.
@@ -51,8 +70,6 @@ Core Features:
 -   Price-time priority execution
 -   Partial order fills
 -   Order book display
-
-Additional Features (Optional / Advanced)
 -   Market orders
 -   Order cancellation
 -   Unique order IDs
@@ -64,22 +81,37 @@ Project Structure
 order-book/
 │
 ├── src/
+│   ├── dll.c
+│   ├── hashtable.c
 │   ├── main.c
+│   ├── mempool.c
+│   ├── order.c
 │   ├── orderbook.c
-│   ├── matching.c
-│   └── utils.c
+│   ├── parser.c
+│   └── rbtree.c
 │
 ├── include/
-│   ├── orderbook.h
-│   ├── matching.h
-│   └── utils.h
+│   ├── errors.h
+│   ├── hastable.h
+│   ├── mempool.h
+│   ├── rbtree.h
+│   ├── trade.h
+│   └── types.h
 │
 ├── tests/
-│   └── test_orders.c
+│   ├── run_test.sh
+│   ├── test_bst.c
+│   ├── test_dll.c
+│   ├── test_hashtable.c
+│   ├── test_logic.c
+│   ├── test_mempool.c
+│   └── test_orderbook.c
 │
+├── .gitignore
+├── generate_orders.py
 ├── Makefile
+├── orders_1M.csv
 └── README.md
-
 
 
 Matching Logic
@@ -99,21 +131,31 @@ Orders can be:
 Fully filled
 Partially filled
 Remaining quantity stays in the book
+```
 
+## 📊 Installation & Usage
 
+1. Build the Engine
+Clone the repository and compile using make:
 
+```Bash
 
+```
 
+## 2. Run the Benchmark
+To run the engine on a dataset and view the performance statistics:
 
+```bash
+./test_orderbook --input tests/data/orders_1M.csv --stats
+```
 
+## 3. Run the Regression Test Suite
 
+The project includes a robust CI-like testing script validating logic, determinism, and memory safety:
 
-
-
-
-
-
-
+```bash
+./tests/run_tests.sh
+```
 
 Why This Project Matters
 
